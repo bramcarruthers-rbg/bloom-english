@@ -10,7 +10,20 @@ export default async function handler(req) {
       method:'POST', headers:{'content-type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:500}})
     });
-    if(!upstream.ok) return Response.json({error:'AI service unavailable or quota reached'}, {status:502});
+    
+if (!upstream.ok) {
+  const details = await upstream.json().catch(() => ({}));
+  console.error(
+    'Gemini API error:',
+    upstream.status,
+    details.error?.status,
+    details.error?.message
+  );
+  return Response.json(
+    {error: 'AI service unavailable or quota reached'},
+    {status:502}
+  );
+}
     const result=await upstream.json();
     const content=result?.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'';
     const out=JSON.parse(content);
